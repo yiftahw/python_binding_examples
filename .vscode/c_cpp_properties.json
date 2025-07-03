@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "compileCommands": [
+                "${workspaceFolder}/litgen/build/compile_commands.json",
+                "${workspaceFolder}/pybind11/build/compile_commands.json",
+                "${workspaceFolder}/boostpython/build/compile_commands.json"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
