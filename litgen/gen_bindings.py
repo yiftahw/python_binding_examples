@@ -4,8 +4,6 @@ headers = [
     "pose.hpp"
 ]
 
-output_dir = "generated"
-
 for header in headers:
     options = litgen.LitgenOptions()
     generated_code = litgen.generate_code_for_file(options, header)

@@ -45,7 +45,6 @@ add_custom_target(copy_shared_lib
     DEPENDS pose_module
     COMMENT "Copying '.so' file to the output directory"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/pose_module.so" "${CMAKE_SOURCE_DIR}/pose_module.so"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/pose_module.pyi" "${CMAKE_SOURCE_DIR}/pose_module.pyi"
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
     VERBATIM
 )
