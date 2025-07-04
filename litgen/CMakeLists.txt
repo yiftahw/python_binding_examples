@@ -8,6 +8,22 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Find a Python3 interpreter
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
+# Test whether or not `litgen` and `pybind11` are installed with the Python3 interpreter
+foreach(package litgen pybind11)
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -c "import ${package}"
+        RESULT_VARIABLE result
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+    if(result)
+        message(FATAL_ERROR "Python package '${package}' was not found, make sure it is available in your Python environment.\nPython3 executable found: ${Python3_EXECUTABLE}\n")
+    else()
+        message(STATUS "Found Python package '${package}'")
+    endif()
+
+endforeach(package litgen pybind11)
+
 # use the python3 interpeter to find the pybind11 package cmake module
 # this will only work if pybind11 was installed as a python package
 # (and not fetched from the git repository)
