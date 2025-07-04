@@ -26,25 +26,28 @@ add_custom_target(generate_bindings
     COMMENT "Generating C++ bindings using litgen"
 )
 
+set(MODULE_NAME "geometry2d")
+project(${MODULE_NAME} CXX)
+
 # Create a pybind11 module from the generated C++ file
-pybind11_add_module(pose_module
-    ${CMAKE_SOURCE_DIR}/pose_module.cpp
+pybind11_add_module(${MODULE_NAME}
+    ${CMAKE_SOURCE_DIR}/${MODULE_NAME}.cpp
 )
-add_dependencies(pose_module generate_bindings)
+add_dependencies(${MODULE_NAME} generate_bindings)
 
 # Ignore the machine, os, compiler suffixes in the output name
 # This is fine for local development
-set_target_properties(pose_module PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
     PREFIX ""
     SUFFIX ".so"
-    OUTPUT_NAME "pose_module"
+    OUTPUT_NAME "${MODULE_NAME}"
 )
 
 add_custom_target(copy_shared_lib
     ALL
-    DEPENDS pose_module
+    DEPENDS ${MODULE_NAME}
     COMMENT "Copying '.so' file to the output directory"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/pose_module.so" "${CMAKE_SOURCE_DIR}/pose_module.so"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/${MODULE_NAME}.so" "${CMAKE_SOURCE_DIR}/${MODULE_NAME}.so"
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
     VERBATIM
 )
