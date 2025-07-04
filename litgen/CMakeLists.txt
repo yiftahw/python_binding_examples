@@ -23,6 +23,7 @@ add_custom_target(generate_bindings
     ALL
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/gen_bindings.py
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS ${CMAKE_SOURCE_DIR}/gen_bindings.py
     COMMENT "Generating C++ bindings using litgen"
 )
 
