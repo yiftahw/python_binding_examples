@@ -1,6 +1,6 @@
 import os
 import argparse
-from typing import List
+from typing import List, Tuple
 import litgen
 
 def gen_header(includes: List[str]) -> str:
@@ -43,7 +43,7 @@ PYBIND11_MODULE(geometry2d, m) {"{"}
 """
     return wrapper.lstrip()
 
-def get_relative_path_and_containing_search_path(header: str, search_paths: List[str]) -> (str, str):
+def get_relative_path_and_containing_search_path(header: str, search_paths: List[str]) -> Tuple[str, str]:
     """
     Given a header file path and a list of search paths, return the relative path of the header
     and the search path that contains it.
