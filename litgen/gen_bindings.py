@@ -1,3 +1,5 @@
+import os
+import argparse
 from typing import List
 import litgen
 
@@ -41,26 +43,86 @@ PYBIND11_MODULE(geometry2d, m) {"{"}
 """
     return wrapper.lstrip()
 
+def get_relative_path_and_containing_search_path(header: str, search_paths: List[str]) -> (str, str):
+    """
+    Given a header file path and a list of search paths, return the relative path of the header
+    and the search path that contains it.
+    If the header is not found in any of the search paths, return the header back, search path as empty string.
+    """
+    if os.path.isabs(header):
+        if not os.path.isfile(header):
+            raise FileNotFoundError(f"Header file '{header}' not found.")
+        # If the header is an absolute path, check if it is contained in any of the search paths
+        for search_path in search_paths:
+            if os.path.commonpath([header, search_path]) == search_path:
+                relative_path = os.path.relpath(header, start=search_path)
+                return relative_path, search_path
+        return header, ""
+    relative_path = ""
+    containing_search_path = ""
+    # if the header is not absolute, check if it can be found in the search paths
+    # if found in more than one search path, emit a warning
+    for search_path in search_paths:
+        full_path = os.path.join(search_path, header)
+        if os.path.isfile(full_path):
+            if containing_search_path:
+                # If we already found a containing search path, emit a warning
+                print(f"Warning: Header '{header}' found in multiple search paths: '{containing_search_path}' and '{search_path}'. Using the first one.")
+            relative_path = os.path.relpath(full_path, start=search_path)
+            containing_search_path = search_path
+    if not containing_search_path:
+        raise FileNotFoundError(f"Header file '{header}' not found in any of the search paths: {search_paths}.")
+    return relative_path, containing_search_path
+        
+def generate(module_name: str, output_dir: str, search_paths: List[str], headers: List[str]):
+    bindings = ""
+    glue_code = ""
+    stubs = ""
+    relative_headers = []
+    for header in headers:
+        # check if the header path is absolute
+        # if absolute, check if some search path is a prefix of the header path
+        # if not absolute, check if the header can be found in the search paths
+        relative_path, containing_dir = get_relative_path_and_containing_search_path(header, search_paths)
+        relative_headers.append(relative_path)
+        full_path = os.path.join(containing_dir, relative_path) if containing_dir and len(containing_dir) > 0 else relative_path
 
-module_name = "geometry2d"
-headers = [
-    "pose.hpp",
-    "line.hpp"
-]
+        options = litgen.LitgenOptions()
+        generated_code = litgen.generate_code_for_file(options, full_path)
 
-bindings = ""
-glue_code = ""
-stubs = ""
-for header in headers:
-    options = litgen.LitgenOptions()
-    generated_code = litgen.generate_code_for_file(options, header)
+        glue_code += generated_code.glue_code + "\n"
+        bindings += generated_code.pydef_code + "\n"
+        stubs += generated_code.stub_code + "\n"
 
-    glue_code += generated_code.glue_code + "\n"
-    bindings += generated_code.pydef_code + "\n"
-    stubs += generated_code.stub_code + "\n"
+    os.makedirs(output_dir, exist_ok=True)
 
-with open(f"{module_name}.cpp", "w") as bindings_file:
-    bindings_file.write(bindings_wrapper(module_name, headers, bindings, glue_code))
+    bindings_name = os.path.join(output_dir, f"{module_name}.cpp")
+    stubs_name = os.path.join(output_dir, f"{module_name}.pyi")
 
-with open(f"{module_name}.pyi", "w") as stub_file:
-    stub_file.write(stubs)
+    with open(bindings_name, "w") as bindings_file:
+        bindings_file.write(bindings_wrapper(module_name, relative_headers, bindings, glue_code))
+
+    with open(stubs_name, "w") as stub_file:
+        stub_file.write(stubs)
+
+def parse_args():
+    # -o, --output: output directory (default: current directory)
+    # <name> <file, ...>: list of headers to bind
+    parser = argparse.ArgumentParser(description="Generate Python bindings and stubs using litgen.")
+    parser.add_argument("-s", "--search-path", action="append", type=str, default=[], help=(
+        "Search path for header files (can be specified multiple times). "
+        "If an included file is found under one of the search paths, the matching prefix will be removed "
+        "from its path when generating include statements. "
+        "For example, given -s /path/to/absolute and a file #include \"/path/to/absolute/include/file.hpp\", "
+        "the generated include will be #include \"include/file.hpp\"."
+    ))
+    parser.add_argument("-o", "--output", type=str, default=os.getcwd(), help="Output directory (default: current directory)")
+    parser.add_argument("name", type=str, help="Name of the module to generate bindings for")
+    parser.add_argument("files", nargs="+", type=str, help="List of header files to bind")
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+    print("search paths:", args.search_path)
+    generate(args.name, args.output, args.search_path, args.files)
+    print("Bindings generated successfully.")
