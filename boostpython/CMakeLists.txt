@@ -36,14 +36,12 @@ set(PROJECT_FILES
 add_definitions(-DGLFW_INCLUDE_NONE -DPROJECT_SOURCE_DIR=\"${PROJECT_SOURCE_DIR}\")
 
 set(COMMON_LIB_DIRECTORIES
-#        ${Boost_LIBRARY_DIRS}
-    /home/yiftah.waisman/boostpython/src/g++-13/x86_64/shared/
-    ${Python_LIBRARY_DIRS}
+        ${Boost_LIBRARY_DIRS}
+        ${Python_LIBRARY_DIRS}
 )
 
 set(COMMON_LIBS
-        boost_python310_yiftah
-        # boost_python310
+        boost_python310
         python3.10
 )
 
