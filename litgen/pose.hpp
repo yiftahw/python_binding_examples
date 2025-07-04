@@ -4,7 +4,7 @@
 
 class Pose {
 public:
-    Pose() : x(0), y(0) {}
+    Pose(float x = 0.f, float y = 0.f) : x(x), y(y) {}
 
     /// this is a function description  
     // returns void  
