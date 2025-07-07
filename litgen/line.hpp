@@ -38,6 +38,15 @@ public:
     std::string to_string() const {
         return "y = " + std::to_string(m()) + " * x + " + std::to_string(n());
     }
+
+    Pose& get_p1() /* return_value_policy::reference */ {
+        return p1;
+    }
+
+    Pose& get_p2() {
+        return p2;
+    }
+
 private:
     Pose p1, p2;
 };
