@@ -27,6 +27,7 @@ public:
 private:
     float x, y, z;
 };
+static_assert(std::is_trivially_copyable_v<Pose>, "Pose must be trivially copyable");
 
 class Line {
 public:
@@ -37,21 +38,46 @@ public:
     }
 };
 
+static_assert(std::is_trivially_copyable_v<Line>, "Line must be trivially copyable");
+
 Pose& get_start(Line& self) { return self.start; }
 Pose& get_end(Line& self) { return self.end; }
 
 PYBIND11_MODULE(pose_module, m) {
-    py::class_<Pose>(m, "Pose")
+    py::class_<Pose>(m, "Pose", py::buffer_protocol())
         .def(py::init<>())
         .def("set_values", &Pose::set_values, "Set x, y, z coordinates")
         .def_property("x", &Pose::get_x, &Pose::set_x, "X coordinate of the pose")
         .def_property("y", &Pose::get_y, &Pose::set_y, "Y coordinate of the pose")
         .def_property("z", &Pose::get_z, &Pose::set_z, "Z coordinate of the pose")
-        .def("__repr__", &Pose::to_string);
+        .def("__repr__", &Pose::to_string)
+        .def_buffer([](Pose& p) -> py::buffer_info {
+            return py::buffer_info(
+                // expose as a raw byte buffer
+                &p,                               // Pointer to buffer
+                1,                                // Size of one scalar (uint8_t)
+                py::format_descriptor<uint8_t>::format(), // Python struct-style format descriptor
+                1,                                  // Number of dimensions
+                { sizeof(Pose) },                  // Buffer dimensions
+                { 1 }                               // Strides (in bytes) for each index
+            );
+        });
 
-    py::class_<Line>(m, "Line")
+    py::class_<Line>(m, "Line", py::buffer_protocol())
         .def(py::init<const Pose&, const Pose&>())
         .def("get_start", &get_start, py::return_value_policy::reference_internal, "Get start Pose of the line")
         .def("get_end", &get_end, py::return_value_policy::reference_internal, "Get end Pose of the line")
-        .def("__repr__", &Line::to_string);
+        .def("__repr__", &Line::to_string)
+        .def_buffer([](Line& l) -> py::buffer_info {
+            return py::buffer_info(
+                // expose as a raw byte buffer
+                &l,                               // Pointer to buffer
+                1,                                // Size of one scalar (uint8_t)
+                py::format_descriptor<uint8_t>::format(), // Python struct-style format descriptor
+                1,                                 // Number of dimensions
+                { sizeof(Line) },                  // Buffer dimensions
+                { 1 }                              // Strides (in bytes) for each index
+            );
+        });
+        
 }
