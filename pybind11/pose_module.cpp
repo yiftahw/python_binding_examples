@@ -1,4 +1,5 @@
 // pose_module.cpp
+#include <concepts>
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -43,41 +44,43 @@ static_assert(std::is_trivially_copyable_v<Line>, "Line must be trivially copyab
 Pose& get_start(Line& self) { return self.start; }
 Pose& get_end(Line& self) { return self.end; }
 
+// templated function that automatically adds buffer protocol support (as raw byte buffers)
+// to any PoD like struct
+template <typename T, typename... CtorArgs>
+    requires std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>
+py::class_<T> bind_buffer(py::module_ &m, const char *name)
+{
+    return py::class_<T>(m, name, py::buffer_protocol())
+        .def(py::init<CtorArgs...>())
+        .def_buffer([](T &self) -> py::buffer_info
+                    { return py::buffer_info(
+                        // expose as a raw byte buffer
+                        reinterpret_cast<uint8_t *>(&self),       // Pointer to buffer
+                        1,                                        // size of element in buffer (1 byte for uint8_t)
+                        py::format_descriptor<uint8_t>::format(), // Python struct-style format descriptor
+                        1,                                        // number of dimensions
+                        {sizeof(T)},                              // buffer dimensions
+                        {1}                                       // strides (in bytes) for each index
+                      ); });
+}
+
 PYBIND11_MODULE(pose_module, m) {
-    py::class_<Pose>(m, "Pose", py::buffer_protocol())
-        .def(py::init<>())
+    // bind_buffer replaces the usual py::class_ definition
+    // to automatically add buffer protocol support for trivially copyable types
+    // as raw byte buffers.
+    // types defined with `bind_buffer` can be directly read/written using the buffer protocol
+    // with (userspace) zero-copy semantics to socket API for example,
+    // which is useful for IPC on the same machine.
+
+    bind_buffer<Pose>(m, "Pose")
         .def("set_values", &Pose::set_values, "Set x, y, z coordinates")
         .def_property("x", &Pose::get_x, &Pose::set_x, "X coordinate of the pose")
         .def_property("y", &Pose::get_y, &Pose::set_y, "Y coordinate of the pose")
         .def_property("z", &Pose::get_z, &Pose::set_z, "Z coordinate of the pose")
-        .def("__repr__", &Pose::to_string)
-        .def_buffer([](Pose& p) -> py::buffer_info {
-            return py::buffer_info(
-                // expose as a raw byte buffer
-                &p,                               // Pointer to buffer
-                1,                                // Size of one scalar (uint8_t)
-                py::format_descriptor<uint8_t>::format(), // Python struct-style format descriptor
-                1,                                  // Number of dimensions
-                { sizeof(Pose) },                  // Buffer dimensions
-                { 1 }                               // Strides (in bytes) for each index
-            );
-        });
+        .def("__repr__", &Pose::to_string);
 
-    py::class_<Line>(m, "Line", py::buffer_protocol())
-        .def(py::init<const Pose&, const Pose&>())
+    bind_buffer<Line, const Pose&, const Pose&>(m, "Line")
         .def("get_start", &get_start, py::return_value_policy::reference_internal, "Get start Pose of the line")
         .def("get_end", &get_end, py::return_value_policy::reference_internal, "Get end Pose of the line")
-        .def("__repr__", &Line::to_string)
-        .def_buffer([](Line& l) -> py::buffer_info {
-            return py::buffer_info(
-                // expose as a raw byte buffer
-                &l,                               // Pointer to buffer
-                1,                                // Size of one scalar (uint8_t)
-                py::format_descriptor<uint8_t>::format(), // Python struct-style format descriptor
-                1,                                 // Number of dimensions
-                { sizeof(Line) },                  // Buffer dimensions
-                { 1 }                              // Strides (in bytes) for each index
-            );
-        });
-        
+        .def("__repr__", &Line::to_string);
 }
